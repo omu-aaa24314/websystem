@@ -114,7 +114,7 @@
                 .then((response) => response.json())
                 .then((data) => {
                     // 特定の値によりGeoJSONをフィルタリング
-                    var filteredData = data.features.filter(feature => feature.properties.N03_004 === '堺市中区');
+                    var filteredData = data.features.filter(feature => feature.properties.N03_004 === '堺市北区');
                     var selected_area = L.geoJSON(filteredData)
                         .bindPopup((layer) => layer.feature.properties.N03_004) // ポップアップで表示
                     map.addLayer(selected_area)
