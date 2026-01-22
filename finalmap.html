@@ -21,6 +21,9 @@
     <!-- 雨雲レイヤーのJavaScript/CSS読み込み -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/mwasil/Leaflet.Rainviewer/leaflet.rainviewer.css" />
     <script src="https://cdn.jsdelivr.net/gh/mwasil/Leaflet.Rainviewer/leaflet.rainviewer.js"></script>
+
+    <script src="https://api.mapbox.com/mapbox.js/plugins/leaflet-omnivore/v0.3.1/leaflet-omnivore.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/leaflet-sprite@1.0.0/dist/leaflet.sprite.min.js"></script>
 </head>
     <body>
         <!-- 地図を表示するdiv要素を宣言 -->
@@ -57,6 +60,42 @@
                 "OpenStreetMap": backgroundLayer,
                 "地理院地図（標準）": chiriinLayer
             }).addTo(map);
+
+            omnivore.csv('siteihinansyo-kikikanri.csv', null)
+                .on('ready', function(e) {
+                    drawMap(e.target.toGeoJSON());
+                })
+                .on('error', function(e) {
+                    console.log(e.error[0].message);
+                });
+
+                var custom = L.icon({
+                    iconUrl: 'Red.png',
+                    iconSize: [40, 40],
+                    iconAnchor: [25, 50],
+                    popupAnchor: [0, -50]
+                });
+
+                function drawMap(shows) {
+                var dataLayer = L.geoJson(shows,{
+                    pointToLayer: function(feature, latlng) {
+                        return L.marker(latlng, {icon: custom});
+                }}).addTo(map);
+                dataLayer.on('click', function(e) {
+                    var properties = e.layer.feature.properties;
+                    L.popup()
+                    .setContent(
+                        '<b>施設名:</b> ' + properties.title + 
+                        '<br><b>住所:</b> ' + properties.address +
+                        '<br><b>風水害避難:</b>' + properties['避難所種別（風水害）'] +
+                        '<br><b>地震避難:</b> ' + properties['避難所種別（地震）']
+                    )
+                    .setLatLng(e.latlng)
+                    .openOn(map);
+                })
+                LayerControl.addOverlay(dataLayer, '避難所')
+                map.fitBounds(dataLayer.getBounds());
+            }
 
             // ピン定義
             const nakamozu_marker = L.marker([34.544865,135.506274]); // ピン＝Markerを初期化
@@ -123,6 +162,27 @@
                     // GeoJSONレイヤに地図がフィットするように表示範囲を自動調整
                     map.fitBounds(selected_area.getBounds());
             });
+
+                // ローカルPC上のOSRMサーバで杉本キャンパスからなかもずキャンパスまでのルートを検索するURL
+            const url = 'https://routing.openstreetmap.de/routed-car/route/v1/driving/135.505276,34.592331;135.506274,34.544865?geometries=geojson&overview=full'
+
+            async function addRouteLayer(){
+            const response = await fetch(url);
+            const json = await response.json();
+            routeLayer = L.geoJSON(json['routes'][0]['geometry'],{
+                            "color": "#FF00FF",
+                            "weight": 6,
+                            "opacity": 0.65
+                        });                            
+            routeLayer.addTo(map);
+            
+            // 地図をルートに合うように調整
+            const bounds = routeLayer.getBounds();
+            map.fitBounds(bounds); 
+            
+            }
+            // 地図にルートを追加
+            addRouteLayer();
 
             //スケールバー
             L.control.scale().addTo(map);
